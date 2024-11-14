@@ -26,6 +26,48 @@ public class Product {
         this.productType = productType;
     }
 
+    // Getter for sizeType
+    public String getSizeType() {
+        return sizeType;
+    }
+
+    // Other getters, if needed
+    public String getVariantId() {
+        return variantId;
+    }
+
+    public int getProductId() {
+        return productId;
+    }
+
+    public String getSizeLabel() {
+        return sizeLabel;
+    }
+
+    public String getProductName() {
+        return productName;
+    }
+
+    public String getBrand() {
+        return brand;
+    }
+
+    public String getColor() {
+        return color;
+    }
+
+    public String getAgeGroup() {
+        return ageGroup;
+    }
+
+    public String getGender() {
+        return gender;
+    }
+
+    public String getProductType() {
+        return productType;
+    }
+
     @Override
     public String toString() {
         return "Product{" +

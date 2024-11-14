@@ -38,4 +38,4 @@ build/
 .DS_Store
 
 ### test file ###
-src/main/resources/data.csv
+src/main/resources/raw_product_data.csv
