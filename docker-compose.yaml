@@ -27,7 +27,7 @@ services:
       DB_USER: productuser
       DB_PASSWORD: productpassword
     volumes:
-      - ./app/src/main/resources/smalldata.csv:/app/src/main/resources/smalldata.csv
+      - ./app/src/main/resources/smalldata.csv:/app/data.csv
 
 volumes:
   postgres_data:

@@ -18,7 +18,7 @@ import java.sql.SQLException;
 
 public class Main {
 
-    private static final String CSV_FILE_PATH = "src/main/resources/smalldata.csv";
+    private static final String CSV_FILE_PATH = "src/main/resources/data.csv";
 
     // Database credentials and connection string
     //private static final String DB_URL = "jdbc:postgresql://localhost:5432/productdb";
@@ -28,26 +28,26 @@ public class Main {
 
     public static void main(String[] args) {
         List<Product> products = loadCSVData(CSV_FILE_PATH);
-        products.forEach(product -> System.out.printf("Loaded Product: " + product + "\n"));
+        products.forEach(product -> System.out.println("Loaded Product: " + product));
 
-        products.forEach(product -> {
-            try {
-                insertProduct(
-                        product.getVariantId(),
-                        product.getProductId(),
-                        product.getSizeLabel(),
-                        product.getProductName(),
-                        product.getBrand(),
-                        product.getColor(),
-                        product.getAgeGroup(),
-                        product.getGender(),
-                        product.getSizeType(),
-                        product.getProductType()
-                );
-            } catch (SQLException e) {
-                System.err.println("Error inserting product: " + e.getMessage());
-            }
-        });
+//       products.forEach(product -> {
+//           try {
+//               insertProduct(
+//                       product.getVariantId(),
+//                       product.getProductId(),
+//                       product.getSizeLabel(),
+//                       product.getProductName(),
+//                       product.getBrand(),
+//                       product.getColor(),
+//                       product.getAgeGroup(),
+//                       product.getGender(),
+//                       product.getSizeType(),
+//                       product.getProductType()
+//               );
+//           } catch (SQLException e) {
+//               System.err.println("Error inserting product: " + e.getMessage());
+//           }
+//       });
     }
 
 
@@ -60,27 +60,76 @@ public class Main {
                 CSVFormat.DEFAULT.withHeader().withIgnoreHeaderCase().withTrim())) {
 
             for (CSVRecord record : csvParser) {
-                Product product = new Product(
-                        record.get("variant_id"),
-                        Integer.parseInt(record.get("product_id")),
-                        record.get("size_label"),
-                        record.get("product_name"),
-                        record.get("brand"),
-                        record.get("color"),
-                        record.get("age_group"),
-                        record.get("gender"),
-                        record.get("size_type"),
-                        record.get("product_type")
-                );
-                products.add(product);
+                try {
+                    // Sanitize and validate each field
+                    String variantId = sanitizeString(record.get("variant_id"));
+                    int productId = sanitizeInteger(record.get("product_id"), -1); // Default to -1 if invalid
+                    String sizeLabel = sanitizeString(record.get("size_label"));
+                    String productName = sanitizeString(record.get("product_name"));
+                    String brand = sanitizeAndStandardizeBrand(record.get("brand"));
+                    String color = sanitizeString(record.get("color"));
+                    String ageGroup = sanitizeString(record.get("age_group"));
+                    String gender = sanitizeString(record.get("gender"));
+                    String sizeType = sanitizeString(record.get("size_type"));
+                    String productType = sanitizeString(record.get("product_type"));
+
+                    // Validate critical fields (e.g., variantId, productId)
+                    if (variantId.isEmpty() || productId == -1) {
+                        System.out.printf("Skipping record due to missing or invalid critical fields: %s%n", record);
+                        continue;
+                    }
+
+                    // Create and add product
+                    Product product = new Product(
+                            variantId, productId, sizeLabel, productName, brand, color, ageGroup, gender, sizeType, productType
+                    );
+                    products.add(product);
+                } catch (Exception e) {
+                    System.out.printf("Error processing record: %s. Skipping record.%n", record, e);
+                }
             }
         } catch (IOException e) {
-            System.out.printf("Error reading CSV file", e);
-        } catch (NumberFormatException e) {
-            System.out.printf("Invalid number format in CSV data", e);
+            System.out.printf("Error reading CSV file: %s%n", e.getMessage());
         }
         return products;
     }
+
+    private static String sanitizeString(String value) {
+        return value == null ? "" : value.trim().replaceAll("[^\\p{Print}]", ""); // Remove non-printable chars
+    }
+
+
+    private static int sanitizeInteger(String value, int defaultValue) {
+        try {
+            return Integer.parseInt(value.trim());
+        } catch (NumberFormatException | NullPointerException e) {
+            return defaultValue; // Return default value if parsing fails
+        }
+    }
+
+    private static String sanitizeAndStandardizeBrand(String brand) {
+        if (brand == null) return "Unknown";
+
+        String sanitizedBrand = sanitizeString(brand).toLowerCase();
+
+        // Example of standardizing common brand variations
+        switch (sanitizedBrand) {
+            case "adidas":
+            case "adidas originals":
+                return "Adidas";
+            case "nike":
+            case "nike inc.":
+                return "Nike";
+            default:
+                return capitalizeFirstLetter(sanitizedBrand);
+        }
+    }
+
+    private static String capitalizeFirstLetter(String value) {
+        if (value.isEmpty()) return value;
+        return value.substring(0, 1).toUpperCase() + value.substring(1);
+    }
+
 
 
     private static void insertProduct(String variantId, int productId, String sizeLabel, String productName,
