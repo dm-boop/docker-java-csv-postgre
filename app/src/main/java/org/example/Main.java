@@ -6,7 +6,6 @@ import org.apache.commons.csv.CSVRecord;
 
 import java.io.FileReader;
 import java.io.IOException;
-import java.nio.file.Paths;
 import java.util.ArrayList;
 import java.util.List;
 
@@ -14,6 +13,9 @@ import java.sql.Connection;
 import java.sql.DriverManager;
 import java.sql.PreparedStatement;
 import java.sql.SQLException;
+
+import java.util.HashSet;
+import java.util.UUID;
 
 
 public class Main {
@@ -28,26 +30,44 @@ public class Main {
 
     public static void main(String[] args) {
         List<Product> products = loadCSVData(CSV_FILE_PATH);
-        products.forEach(product -> System.out.println("Loaded Product: " + product));
 
-//       products.forEach(product -> {
-//           try {
-//               insertProduct(
-//                       product.getVariantId(),
-//                       product.getProductId(),
-//                       product.getSizeLabel(),
-//                       product.getProductName(),
-//                       product.getBrand(),
-//                       product.getColor(),
-//                       product.getAgeGroup(),
-//                       product.getGender(),
-//                       product.getSizeType(),
-//                       product.getProductType()
-//               );
-//           } catch (SQLException e) {
-//               System.err.println("Error inserting product: " + e.getMessage());
-//           }
-//       });
+
+        // Check if variantId is a uuid or not
+       //if (!isVariantIdUnique(products)) {
+       //    System.out.println("variantId is not unique. You need to generate a UUID.");
+       //} else {
+       //    System.out.println("variantId is unique.");
+       //}
+
+        if (setIsDuplicate(products)) {
+            System.out.println("Duplicated items are tagged.");
+        } else {
+            System.out.println("Failed to tag duplicated items.");
+        }
+
+
+//        products.forEach(product -> System.out.println("Loaded Product: " + product));
+
+        products.forEach(product -> {
+            try {
+               insertProduct(
+                       // uuid is generated automatically, no need to pass
+                       product.getVariantId(),
+                       product.getProductId(),
+                       product.getSizeLabel(),
+                       product.getProductName(),
+                       product.getBrand(),
+                       product.getColor(),
+                       product.getAgeGroup(),
+                       product.getGender(),
+                       product.getSizeType(),
+                       product.getProductType(),
+                       product.getIsDuplicate()
+               );
+           } catch (SQLException e) {
+               System.err.println("Error inserting product: " + e.getMessage());
+           }
+       });
     }
 
 
@@ -134,26 +154,29 @@ public class Main {
 
     private static void insertProduct(String variantId, int productId, String sizeLabel, String productName,
            String brand, String color, String ageGroup, String gender,
-           String sizeType, String productType) throws SQLException {
+           String sizeType, String productType, Boolean isDuplicate) throws SQLException {
 
-       String insertQuery = "INSERT INTO products (variant_id, product_id, size_label, product_name, " +
-               "brand, color, age_group, gender, size_type, product_type) " +
-               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+       String insertQuery = "INSERT INTO products (uuid, variant_id, product_id, size_label, product_name, " +
+               "brand, color, age_group, gender, size_type, product_type, is_duplicate) " +
+               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
        // Establish database connection and execute insert - TODO This is definitely need to move from here
        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASSWORD);
             PreparedStatement pstmt = conn.prepareStatement(insertQuery)) {
 
-           pstmt.setString(1, variantId);
-           pstmt.setInt(2, productId);
-           pstmt.setString(3, sizeLabel);
-           pstmt.setString(4, productName);
-           pstmt.setString(5, brand);
-           pstmt.setString(6, color);
-           pstmt.setString(7, ageGroup);
-           pstmt.setString(8, gender);
-           pstmt.setString(9, sizeType);
-           pstmt.setString(10, productType);
+           String uuid = UUID.randomUUID().toString();
+           pstmt.setString(1, uuid);
+           pstmt.setString(2, variantId);
+           pstmt.setInt(3, productId);
+           pstmt.setString(4, sizeLabel);
+           pstmt.setString(5, productName);
+           pstmt.setString(6, brand);
+           pstmt.setString(7, color);
+           pstmt.setString(8, ageGroup);
+           pstmt.setString(9, gender);
+           pstmt.setString(10, sizeType);
+           pstmt.setString(11, productType);
+           pstmt.setBoolean(12, isDuplicate);
 
            pstmt.executeUpdate();
            System.out.println("Product inserted successfully.");
@@ -163,6 +186,28 @@ public class Main {
            throw e;
        }
    }
+
+    private static boolean isVariantIdUnique(List<Product> products) {
+        HashSet<String> uniqueIds = new HashSet<>();
+        for (Product product : products) {
+            if (!uniqueIds.add(product.getVariantId())) {
+                System.out.printf("Duplicate variantId found: %s%n", product.getVariantId());
+                //return false;
+            }
+        }
+        return true;
+    }
+
+    private static boolean setIsDuplicate(List<Product> products) {
+        HashSet<String> uniqueIds = new HashSet<>();
+        for (Product product : products) {
+            if (!uniqueIds.add(product.getVariantId())) {
+                product.setIsDuplicate(true);
+                //System.out.println(product.getIsDuplicate());
+            }
+        }
+        return true;
+    }
 
 }
 

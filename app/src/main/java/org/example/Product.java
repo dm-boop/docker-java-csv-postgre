@@ -1,19 +1,26 @@
 package org.example;
 
-public class Product {
-    private String variantId;
-    private int productId;
-    private String sizeLabel;
-    private String productName;
-    private String brand;
-    private String color;
-    private String ageGroup;
-    private String gender;
-    private String sizeType;
-    private String productType;
+import java.util.UUID;
 
-    public Product(String variantId, int productId, String sizeLabel, String productName,
-                   String brand, String color, String ageGroup, String gender, String sizeType, String productType) {
+public class Product {
+    private String uuid;         // Unique identifier (generated)
+    private String variantId;    // Original variant ID
+    private int productId;       // Product ID
+    private String sizeLabel;    // Size label
+    private String productName;  // Product name
+    private String brand;        // Brand name
+    private String color;        // Product color
+    private String ageGroup;     // Age group
+    private String gender;       // Gender
+    private String sizeType;     // Size type
+    private String productType;  // Product taxonomy
+    private boolean isDuplicate; // Flag for duplicate variant IDs
+
+    // Updated constructor
+    public Product(String uuid, String variantId, int productId, String sizeLabel, String productName,
+                   String brand, String color, String ageGroup, String gender, String sizeType,
+                   String productType, boolean isDuplicate) {
+        this.uuid = uuid;
         this.variantId = variantId;
         this.productId = productId;
         this.sizeLabel = sizeLabel;
@@ -24,14 +31,23 @@ public class Product {
         this.gender = gender;
         this.sizeType = sizeType;
         this.productType = productType;
+        this.isDuplicate = isDuplicate;
     }
 
-    // Getter for sizeType
-    public String getSizeType() {
-        return sizeType;
+    // Additional constructor for backward compatibility
+    public Product(String variantId, int productId, String sizeLabel, String productName,
+                   String brand, String color, String ageGroup, String gender, String sizeType,
+                   String productType) {
+        this(UUID.randomUUID().toString(), variantId, productId, sizeLabel, productName,
+                brand, color, ageGroup, gender, sizeType, productType, false);
     }
 
-    // Other getters, if needed
+    // Getters for new fields
+    public String getUuid() {
+        return uuid;
+    }
+
+    // Other getters
     public String getVariantId() {
         return variantId;
     }
@@ -64,14 +80,28 @@ public class Product {
         return gender;
     }
 
+    public String getSizeType() {
+        return sizeType;
+    }
+
     public String getProductType() {
         return productType;
     }
 
+    public Boolean getIsDuplicate() {
+        return isDuplicate;
+    }
+
+    public void setIsDuplicate(Boolean isDuplicate) {
+        this.isDuplicate = isDuplicate;
+    }
+
+    // toString() method updated with new fields
     @Override
     public String toString() {
         return "Product{" +
-                "variantId='" + variantId + '\'' +
+                "uuid='" + uuid + '\'' +
+                ", variantId='" + variantId + '\'' +
                 ", productId=" + productId +
                 ", sizeLabel='" + sizeLabel + '\'' +
                 ", productName='" + productName + '\'' +
@@ -81,6 +111,7 @@ public class Product {
                 ", gender='" + gender + '\'' +
                 ", sizeType='" + sizeType + '\'' +
                 ", productType='" + productType + '\'' +
+                ", isDuplicate=" + isDuplicate +
                 '}';
     }
 }
