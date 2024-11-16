@@ -5,14 +5,14 @@ CREATE TABLE IF NOT EXISTS products (
     uuid VARCHAR(50) PRIMARY KEY,                  -- Unique identifier for each product (generated in Java)
     variant_id VARCHAR(50),                 -- Original variant ID (can be NULL or duplicated)
     product_id INTEGER NOT NULL,
-    size_label VARCHAR(20),
-    product_name VARCHAR(100),
+    size_label VARCHAR(50),
+    product_name VARCHAR(200),
     brand VARCHAR(50),
-    color VARCHAR(30),
-    age_group VARCHAR(20),
-    gender VARCHAR(10),
-    size_type VARCHAR(20),
-    product_type VARCHAR(100),
+    color VARCHAR(50),
+    age_group VARCHAR(50),
+    gender VARCHAR(50),
+    size_type VARCHAR(50),
+    product_type VARCHAR(200),
     is_duplicate BOOLEAN NOT NULL DEFAULT FALSE -- Flag to indicate duplicate variant IDs
 );
 

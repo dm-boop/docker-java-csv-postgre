@@ -92,6 +92,56 @@ public class Product {
         return isDuplicate;
     }
 
+    // Setter for variantId
+    public void setVariantId(String variantId) {
+        this.variantId = variantId;
+    }
+
+    // Setter for productId
+    public void setProductId(int productId) {
+        this.productId = productId;
+    }
+
+    // Setter for sizeLabel
+    public void setSizeLabel(String sizeLabel) {
+        this.sizeLabel = sizeLabel;
+    }
+
+    // Setter for productName
+    public void setProductName(String productName) {
+        this.productName = productName;
+    }
+
+    // Setter for brand
+    public void setBrand(String brand) {
+        this.brand = brand;
+    }
+
+    // Setter for color
+    public void setColor(String color) {
+        this.color = color;
+    }
+
+    // Setter for ageGroup
+    public void setAgeGroup(String ageGroup) {
+        this.ageGroup = ageGroup;
+    }
+
+    // Setter for gender
+    public void setGender(String gender) {
+        this.gender = gender;
+    }
+
+    // Setter for sizeType
+    public void setSizeType(String sizeType) {
+        this.sizeType = sizeType;
+    }
+
+    // Setter for productType
+    public void setProductType(String productType) {
+        this.productType = productType;
+    }
+
     public void setIsDuplicate(Boolean isDuplicate) {
         this.isDuplicate = isDuplicate;
     }
