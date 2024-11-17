@@ -28,6 +28,7 @@ services:
       DB_PASSWORD: productpassword
     volumes:
       - ./app/src/main/resources/data.csv:/app/src/main/resources/data.csv
+      #- ./app/src/main/resources/smalldata-UTF8-mergetest.csv:/app/src/main/resources/data.csv
 
 volumes:
   postgres_data:

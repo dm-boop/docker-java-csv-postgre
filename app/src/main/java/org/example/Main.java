@@ -8,7 +8,6 @@ import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
-import java.io.FileReader;
 import java.io.IOException;
 import java.util.ArrayList;
 import java.util.List;
@@ -19,25 +18,50 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.ResultSet;
 
-import java.util.HashSet;
+import java.util.HashMap;
+import java.util.Map;
+
 import java.util.UUID;
+
+import static org.example.BrandNormalizer.canonicalBrands;
+import static org.example.BrandNormalizer.getNormalizedBrandNameForOriginalName;
 
 
 public class Main {
 
+    //private static final String CSV_FILE_PATH = "src/main/resources/smalldata-UTF8-mergetest.csv";
     private static final String CSV_FILE_PATH = "src/main/resources/data.csv";
 
     // Database credentials and connection string
+    //private static final String DB_URL = "jdbc:postgresql://localhost:5432/productdb?characterEncoding=UTF8";
     private static final String DB_URL = "jdbc:postgresql://postgres:5432/productdb?characterEncoding=UTF8";
     private static final String USER = "productuser";
     private static final String PASSWORD = "productpassword";
 
     public static void main(String[] args) {
+
+        List<Brand> brands = loadBrands(CSV_FILE_PATH);
+
+        List<Brand> canonicalBrands;
+
+        brands.sort((b1, b2) -> b1.getOriginalBrand().toLowerCase().compareTo(b2.getOriginalBrand().toLowerCase()));
+        brands.forEach( brand -> {
+            System.out.println(brand.getOriginalBrand());
+        });
+
+        // let's get a list of original brands with their mapping to their canonical brand
+        canonicalBrands = canonicalBrands(brands);
+
+
         List<Product> products = loadCSVData(CSV_FILE_PATH);
 
-        products.forEach(product -> {
+        for (Product product : products) {
             try {
                 List<Product> productAddedWithSameVariantId = selectProductsByVariantId(product.getVariantId());
+
+                // Update the brand before we try to insert
+                String normalizedBrand = getNormalizedBrandNameForOriginalName(canonicalBrands,product.getBrand());
+                product.setBrand(normalizedBrand);
 
                 if(productAddedWithSameVariantId.isEmpty())
                 {
@@ -78,12 +102,12 @@ public class Main {
                 }
                 else
                 {
-                    // Somehow we already inserted twice, error
+                    System.err.println("Somehow we already inserted twice, err");
                 }
            } catch (SQLException e) {
                System.err.println("Error inserting product: " + e.getMessage());
            }
-       });
+       };
     }
 
 
@@ -102,7 +126,7 @@ public class Main {
                     int productId = sanitizeInteger(record.get("product_id"), -1); // Default to -1 if invalid
                     String sizeLabel = record.get("size_label");
                     String productName = record.get("product_name");
-                    String brand = sanitizeAndStandardizeBrand(record.get("brand"));
+                    String brand = record.get("brand");
                     String color = record.get("color");
                     String ageGroup = record.get("age_group");
                     String gender = record.get("gender");
@@ -130,6 +154,39 @@ public class Main {
         return products;
     }
 
+    private static List<Brand> loadBrands(String filePath) {
+        List<Brand> brands = new ArrayList<>();
+
+        try (CSVParser csvParser = new CSVParser(
+                new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8), // Use UTF-8 encoding
+                CSVFormat.DEFAULT.withHeader().withIgnoreHeaderCase().withTrim())) {
+
+            for (CSVRecord record : csvParser) {
+                try {
+                    // Sanitize and validate each field
+                    String variantId = record.get("variant_id");
+                    int productId = sanitizeInteger(record.get("product_id"), -1); // Default to -1 if invalid
+                    String brand = record.get("brand") == null ? "" : record.get("brand");
+
+                    // Validate critical fields (e.g., variantId, productId)
+                    if (variantId.isEmpty() || productId == -1) {
+                        System.out.printf("Skipping record due to missing or invalid critical fields: %s%n", record);
+                        continue;
+                    }
+
+                    // Create and add product
+                    Brand newbrand = new Brand(brand);
+                    brands.add(newbrand);
+                } catch (Exception e) {
+                    System.out.printf("Error processing record: %s. Skipping record.%n", record, e);
+                }
+            }
+        } catch (IOException e) {
+            System.out.printf("Error reading CSV file: %s%n", e.getMessage());
+        }
+        return brands;
+    }
+
     private static int sanitizeInteger(String value, int defaultValue) {
         try {
             return Integer.parseInt(value.trim());
@@ -137,30 +194,6 @@ public class Main {
             return defaultValue; // Return default value if parsing fails
         }
     }
-
-    private static String sanitizeAndStandardizeBrand(String brand) {
-        if (brand == null) return "Unknown";
-
-        String sanitizedBrand = brand.toLowerCase();
-
-        // Example of standardizing common brand variations
-        switch (sanitizedBrand) {
-            case "adidas":
-            case "adidas originals":
-                return "Adidas";
-            case "nike":
-            case "nike inc.":
-                return "Nike";
-            default:
-                return capitalizeFirstLetter(sanitizedBrand);
-        }
-    }
-
-    private static String capitalizeFirstLetter(String value) {
-        if (value.isEmpty()) return value;
-        return value.substring(0, 1).toUpperCase() + value.substring(1);
-    }
-
 
     private static void insertProduct(String variantId, int productId, String sizeLabel, String productName,
            String brand, String color, String ageGroup, String gender,
@@ -324,6 +357,11 @@ public class Main {
     }
 
     private static String mergeBrandNames(String existingBrand, String newBrand) {
+
+        if ( (existingBrand == null || existingBrand.isEmpty()) && (newBrand == null || newBrand.isEmpty())) {
+            return "";
+        }
+
         if (existingBrand == null || existingBrand.isEmpty()) {
             return capitalizeWords(newBrand);
         }
@@ -343,7 +381,7 @@ public class Main {
             return formattedNewBrand;
         }
 
-        // Default: Concatenate them with a separator if they are completely different
+        // Default: Concatenate them with a separator if they are completely different, we shall never reach this point
         return formattedExistingBrand + "/" + formattedNewBrand;
     }
 
@@ -401,6 +439,53 @@ public class Main {
             capitalized.append(" ");
         }
         return capitalized.toString().trim();
+    }
+
+    private static List<Brand> processBrands(List<Brand> brands) {
+        // Create a new list to hold the canonical forms
+        List<Brand> canonicalBrandList = new ArrayList<>();
+
+        // Create a map to track the canonical form for each normalized brand name
+        Map<String, String> brandCanonicalMap = new HashMap<>();
+
+        // Iterate through the original brand list
+        for (Brand brand : brands) {
+            // Normalize the brand by converting to lowercase and trim spaces
+            String normalizedBrand = normalizeBrand(brand.getOriginalBrand());
+
+            // Split brand name into main brand and sub-brand part (if any)
+            String[] parts = normalizedBrand.split(":", 2);
+            String mainBrand = parts[0].trim();
+            String subBrand = (parts.length > 1) ? parts[1].trim() : null;
+
+            // Check if the main brand already has a canonical form
+            if (!brandCanonicalMap.containsKey(mainBrand)) {
+                // If not, assign the current brand as its canonical form
+                brandCanonicalMap.put(mainBrand, brand.getOriginalBrand());
+                // Add the canonical form to the new list
+                canonicalBrandList.add(brand);
+            } else {
+                // Handle sub-brand logic: If the main brand exists, we ensure no duplicates in sub-brand.
+                if (subBrand != null && !subBrand.isEmpty()) {
+                    // Add the sub-brand without duplicates for the main brand
+                    boolean found = false;
+                    for (Brand canonicalBrand : canonicalBrandList) {
+                        if (canonicalBrand.getOriginalBrand().contains(mainBrand) && canonicalBrand.getOriginalBrand().contains(subBrand)) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        canonicalBrandList.add(brand); // Add the sub-brand to the list
+                    }
+                }
+            }
+        }
+        return canonicalBrandList;
+    }
+
+    private static String normalizeBrand(String brandName) {
+        return brandName != null ? brandName.toLowerCase().trim() : null;
     }
 }
 
