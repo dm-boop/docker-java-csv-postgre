@@ -5,10 +5,10 @@ import java.util.stream.Collectors;
 
 public class BrandNormalizer {
 
+    // Method to canonical brand names, returns a list of brands with original name -> canonical normalized name mapping
     public static List<Brand> canonicalBrands(List<Brand> brands) {
         // Map to store the canonical name for each group
         List<String> canonicalBrands = new ArrayList<>();
-        List<Brand> finalbrandlist = new ArrayList<>();
 
         for (Brand brand : brands) {
             String originalBrand = brand.getOriginalBrand();
@@ -28,32 +28,28 @@ public class BrandNormalizer {
                 // TODO this check up here is not good, match must be at the start of the brandname
 
 
-                if(canonicalWords.size() == 1 && commonWords == 1) //This brand name must be canonical and already in the list of canonical brands
+                if (canonicalWords.size() == 1 && commonWords == 1) //This brand name must be canonical and already in the list of canonical brands
                 {
                     matched = true;
                     brand.setNormalizedBrand(canonicalBrand);
                     brand.setSubBrand("");
-                }
-                else if (commonWords >= 2)  // Let's assume that at least 2 words need to match at the beginning of the brand name, hopefully there are no separate brands that match this criteria
+                } else if (commonWords >= 2)  // Let's assume that at least 2 words need to match at the beginning of the brand name, hopefully there are no separate brands that match this criteria
                 {
-                        matched = true;
-                        // Update canonical name if the new brand is shorter
-                        if (normalizedBrand.length() < canonicalBrand.length()) {
-                            canonicalBrands.remove(canonicalBrand);
-                            canonicalBrands.add(canonicalBrand);
+                    matched = true;
+                    // Update canonical name if the new brand is shorter
+                    if (normalizedBrand.length() < canonicalBrand.length()) {
+                        canonicalBrands.remove(canonicalBrand);
+                        canonicalBrands.add(canonicalBrand);
 
-                        } else {
-                        }
-                }
-                else
-                {
-                    newCanonicalBrandName=normalizedBrand;
+                    } else {
+                    }
+                } else {
+                    newCanonicalBrandName = normalizedBrand;
                 }
             }
 
             // If no match was found, add this as a new canonical brand
-            if (!matched)
-            {
+            if (!matched) {
                 canonicalBrands.add(newCanonicalBrandName);
             }
         }
@@ -79,25 +75,24 @@ public class BrandNormalizer {
                 // TODO this check up here is not good, match must be at the start of the brandname
 
 
-                if(canonicalWords.size() == 1 && commonWords == 1) //This brand name must be canonical and already in the list of canonical brands
+                if (canonicalWords.size() == 1 && commonWords == 1) //This brand name must be canonical and already in the list of canonical brands
                 {
                     brand.setNormalizedBrand(canonicalBrand);
                     brand.setSubBrand("");
-                }
-                else if (commonWords >= 2)  // Let's assume that at least 2 words need to match at the beginning of the brand name, hopefully there are no separate brands that match this criteria
+                } else if (commonWords >= 2)  // Let's assume that at least 2 words need to match at the beginning of the brand name, hopefully there are no separate brands that match this criteria
                 {
                     matched = true;
                     brand.setNormalizedBrand(canonicalBrand);
                     brand.setSubBrand(normalizedBrand.replaceFirst(canonicalBrand, "").trim());
                 }
             }
-
         }
 
 
         return brands;
     }
 
+    // Method to sanitize and normalize brand names
     private static String normalizeBrand(String brand) {
         if (brand == null || brand.trim().isEmpty()) {
             return ""; // Return empty string if input is null or empty
@@ -108,8 +103,7 @@ public class BrandNormalizer {
                 .collect(Collectors.joining(" "));
     }
 
-
-    // Method to find the normalized brand for an original name
+    // Method to find the normalized brand name for an original name
     public static String getNormalizedBrandNameForOriginalName(List<Brand> brands, String originalName) {
         if (brands == null || originalName == null || originalName.isEmpty()) {
             return null; // Return null if the list or original name is invalid

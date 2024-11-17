@@ -18,8 +18,6 @@ import java.sql.PreparedStatement;
 import java.sql.SQLException;
 import java.sql.ResultSet;
 
-import java.util.HashMap;
-import java.util.Map;
 
 import java.util.UUID;
 
@@ -29,11 +27,11 @@ import static org.example.BrandNormalizer.getNormalizedBrandNameForOriginalName;
 
 public class Main {
 
-    //private static final String CSV_FILE_PATH = "src/main/resources/smalldata-UTF8-mergetest.csv";
+    //private static final String CSV_FILE_PATH = "src/main/resources/smalldata-UTF8-mergetest.csv"; // For testing locally
     private static final String CSV_FILE_PATH = "src/main/resources/data.csv";
 
     // Database credentials and connection string
-    //private static final String DB_URL = "jdbc:postgresql://localhost:5432/productdb?characterEncoding=UTF8";
+    //private static final String DB_URL = "jdbc:postgresql://localhost:5432/productdb?characterEncoding=UTF8"; // For testing locally
     private static final String DB_URL = "jdbc:postgresql://postgres:5432/productdb?characterEncoding=UTF8";
     private static final String USER = "productuser";
     private static final String PASSWORD = "productpassword";
@@ -41,11 +39,10 @@ public class Main {
     public static void main(String[] args) {
 
         List<Brand> brands = loadBrands(CSV_FILE_PATH);
-
         List<Brand> canonicalBrands;
 
         brands.sort((b1, b2) -> b1.getOriginalBrand().toLowerCase().compareTo(b2.getOriginalBrand().toLowerCase()));
-        brands.forEach( brand -> {
+        brands.forEach(brand -> {
             System.out.println(brand.getOriginalBrand());
         });
 
@@ -60,28 +57,25 @@ public class Main {
                 List<Product> productAddedWithSameVariantId = selectProductsByVariantId(product.getVariantId());
 
                 // Update the brand before we try to insert
-                String normalizedBrand = getNormalizedBrandNameForOriginalName(canonicalBrands,product.getBrand());
+                String normalizedBrand = getNormalizedBrandNameForOriginalName(canonicalBrands, product.getBrand());
                 product.setBrand(normalizedBrand);
 
-                if(productAddedWithSameVariantId.isEmpty())
-                {
+                if (productAddedWithSameVariantId.isEmpty()) {
                     insertProduct(
-                           // uuid is generated automatically, no need to pass
-                           product.getVariantId(),
-                           product.getProductId(),
-                           product.getSizeLabel(),
-                           product.getProductName(),
-                           product.getBrand(),
-                           product.getColor(),
-                           product.getAgeGroup(),
-                           product.getGender(),
-                           product.getSizeType(),
-                           product.getProductType(),
-                           product.getIsDuplicate()
-                   );
-                }
-                else if(productAddedWithSameVariantId.size() == 1)
-                {
+                            // uuid is generated automatically, no need to pass
+                            product.getVariantId(),
+                            product.getProductId(),
+                            product.getSizeLabel(),
+                            product.getProductName(),
+                            product.getBrand(),
+                            product.getColor(),
+                            product.getAgeGroup(),
+                            product.getGender(),
+                            product.getSizeType(),
+                            product.getProductType(),
+                            product.getIsDuplicate()
+                    );
+                } else if (productAddedWithSameVariantId.size() == 1) {
                     //Instead of adding it again, we merge the data
                     Product mergedProduct = mergeProducts(productAddedWithSameVariantId.getFirst(), product);
 
@@ -99,17 +93,15 @@ public class Main {
                             mergedProduct.getIsDuplicate()
                     );
 
-                }
-                else
-                {
+                } else {
                     System.err.println("Somehow we already inserted twice, err");
                 }
-           } catch (SQLException e) {
-               System.err.println("Error inserting product: " + e.getMessage());
-           }
-       };
+            } catch (SQLException e) {
+                System.err.println("Error inserting product: " + e.getMessage());
+            }
+        }
+        ;
     }
-
 
 
     private static List<Product> loadCSVData(String filePath) {
@@ -196,39 +188,39 @@ public class Main {
     }
 
     private static void insertProduct(String variantId, int productId, String sizeLabel, String productName,
-           String brand, String color, String ageGroup, String gender,
-           String sizeType, String productType, Boolean isDuplicate) throws SQLException {
+                                      String brand, String color, String ageGroup, String gender,
+                                      String sizeType, String productType, Boolean isDuplicate) throws SQLException {
 
-       String insertQuery = "INSERT INTO products (uuid, variant_id, product_id, size_label, product_name, " +
-               "brand, color, age_group, gender, size_type, product_type, is_duplicate) " +
-               "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
+        String insertQuery = "INSERT INTO products (uuid, variant_id, product_id, size_label, product_name, " +
+                "brand, color, age_group, gender, size_type, product_type, is_duplicate) " +
+                "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-       // Establish database connection and execute insert - TODO This is definitely need to move from here
-       try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASSWORD);
-            PreparedStatement pstmt = conn.prepareStatement(insertQuery)) {
+        // Establish database connection and execute insert - TODO This is definitely need to move from here
+        try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASSWORD);
+             PreparedStatement pstmt = conn.prepareStatement(insertQuery)) {
 
-           String uuid = UUID.randomUUID().toString();
-           pstmt.setString(1, uuid);
-           pstmt.setString(2, variantId);
-           pstmt.setInt(3, productId);
-           pstmt.setString(4, sizeLabel);
-           pstmt.setString(5, productName);
-           pstmt.setString(6, brand);
-           pstmt.setString(7, color);
-           pstmt.setString(8, ageGroup);
-           pstmt.setString(9, gender);
-           pstmt.setString(10, sizeType);
-           pstmt.setString(11, productType);
-           pstmt.setBoolean(12, isDuplicate);
+            String uuid = UUID.randomUUID().toString();
+            pstmt.setString(1, uuid);
+            pstmt.setString(2, variantId);
+            pstmt.setInt(3, productId);
+            pstmt.setString(4, sizeLabel);
+            pstmt.setString(5, productName);
+            pstmt.setString(6, brand);
+            pstmt.setString(7, color);
+            pstmt.setString(8, ageGroup);
+            pstmt.setString(9, gender);
+            pstmt.setString(10, sizeType);
+            pstmt.setString(11, productType);
+            pstmt.setBoolean(12, isDuplicate);
 
-           pstmt.executeUpdate();
-           System.out.println("Product inserted successfully.");
+            pstmt.executeUpdate();
+            System.out.println("Product inserted successfully.");
 
-       } catch (SQLException e) {
-           System.err.println("Error inserting product: " + e.getMessage());
-           throw e;
-       }
-   }
+        } catch (SQLException e) {
+            System.err.println("Error inserting product: " + e.getMessage());
+            throw e;
+        }
+    }
 
 
     private static void updateProductByVariantId(String variantId, int productId, String sizeLabel, String productName,
@@ -358,7 +350,7 @@ public class Main {
 
     private static String mergeBrandNames(String existingBrand, String newBrand) {
 
-        if ( (existingBrand == null || existingBrand.isEmpty()) && (newBrand == null || newBrand.isEmpty())) {
+        if ((existingBrand == null || existingBrand.isEmpty()) && (newBrand == null || newBrand.isEmpty())) {
             return "";
         }
 
@@ -439,53 +431,6 @@ public class Main {
             capitalized.append(" ");
         }
         return capitalized.toString().trim();
-    }
-
-    private static List<Brand> processBrands(List<Brand> brands) {
-        // Create a new list to hold the canonical forms
-        List<Brand> canonicalBrandList = new ArrayList<>();
-
-        // Create a map to track the canonical form for each normalized brand name
-        Map<String, String> brandCanonicalMap = new HashMap<>();
-
-        // Iterate through the original brand list
-        for (Brand brand : brands) {
-            // Normalize the brand by converting to lowercase and trim spaces
-            String normalizedBrand = normalizeBrand(brand.getOriginalBrand());
-
-            // Split brand name into main brand and sub-brand part (if any)
-            String[] parts = normalizedBrand.split(":", 2);
-            String mainBrand = parts[0].trim();
-            String subBrand = (parts.length > 1) ? parts[1].trim() : null;
-
-            // Check if the main brand already has a canonical form
-            if (!brandCanonicalMap.containsKey(mainBrand)) {
-                // If not, assign the current brand as its canonical form
-                brandCanonicalMap.put(mainBrand, brand.getOriginalBrand());
-                // Add the canonical form to the new list
-                canonicalBrandList.add(brand);
-            } else {
-                // Handle sub-brand logic: If the main brand exists, we ensure no duplicates in sub-brand.
-                if (subBrand != null && !subBrand.isEmpty()) {
-                    // Add the sub-brand without duplicates for the main brand
-                    boolean found = false;
-                    for (Brand canonicalBrand : canonicalBrandList) {
-                        if (canonicalBrand.getOriginalBrand().contains(mainBrand) && canonicalBrand.getOriginalBrand().contains(subBrand)) {
-                            found = true;
-                            break;
-                        }
-                    }
-                    if (!found) {
-                        canonicalBrandList.add(brand); // Add the sub-brand to the list
-                    }
-                }
-            }
-        }
-        return canonicalBrandList;
-    }
-
-    private static String normalizeBrand(String brandName) {
-        return brandName != null ? brandName.toLowerCase().trim() : null;
     }
 }
 

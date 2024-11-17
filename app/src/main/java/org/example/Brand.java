@@ -8,7 +8,7 @@ public class Brand {
     private String originalBrand;     // The original brand name as it appears in the CSV
 
 
-    public Brand(String normalizedBrand, String subBrand, String originalBrand ) {
+    public Brand(String normalizedBrand, String subBrand, String originalBrand) {
         this.normalizedBrand = normalizedBrand;
         this.subBrand = subBrand;
         this.originalBrand = originalBrand;
