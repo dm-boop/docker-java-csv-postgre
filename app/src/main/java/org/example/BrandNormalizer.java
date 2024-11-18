@@ -24,16 +24,21 @@ public class BrandNormalizer {
 
                 // Check how many words the current brand has in common with the canonical one
                 List<String> canonicalWords = Arrays.asList(canonicalBrand.split("\\s+"));
-                long commonWords = words.stream().filter(canonicalWords::contains).count();
-                // TODO this check up here is not good, match must be at the start of the brandname
+                int commonStartingWords = 0;
+                for (int i = 0; i < Math.min(words.size(), canonicalWords.size()); i++) {
+                    if (!words.get(i).equalsIgnoreCase(canonicalWords.get(i))) {
+                        break; // Stop counting on first mismatch
+                    }
+                    commonStartingWords++;
+                }
 
 
-                if (canonicalWords.size() == 1 && commonWords == 1) //This brand name must be canonical and already in the list of canonical brands
+                if (canonicalWords.size() == 1 && commonStartingWords == 1) //This brand name must be canonical and already in the list of canonical brands
                 {
                     matched = true;
                     brand.setNormalizedBrand(canonicalBrand);
                     brand.setSubBrand("");
-                } else if (commonWords >= 2)  // Let's assume that at least 2 words need to match at the beginning of the brand name, hopefully there are no separate brands that match this criteria
+                } else if (commonStartingWords >= 2)  // Let's assume that at least 2 words need to match at the beginning of the brand name, hopefully there are no separate brands that match this criteria
                 {
                     matched = true;
                     // Update canonical name if the new brand is shorter
@@ -71,15 +76,20 @@ public class BrandNormalizer {
 
                 // Check how many words the current brand has in common with the canonical one
                 List<String> canonicalWords = Arrays.asList(canonicalBrand.split("\\s+"));
-                long commonWords = words.stream().filter(canonicalWords::contains).count();
-                // TODO this check up here is not good, match must be at the start of the brandname
+                int commonStartingWords = 0;
+                for (int i = 0; i < Math.min(words.size(), canonicalWords.size()); i++) {
+                    if (!words.get(i).equalsIgnoreCase(canonicalWords.get(i))) {
+                        break; // Stop counting on first mismatch
+                    }
+                    commonStartingWords++;
+                }
 
 
-                if (canonicalWords.size() == 1 && commonWords == 1) //This brand name must be canonical and already in the list of canonical brands
+                if (canonicalWords.size() == 1 && commonStartingWords == 1) //This brand name must be canonical and already in the list of canonical brands
                 {
                     brand.setNormalizedBrand(canonicalBrand);
                     brand.setSubBrand("");
-                } else if (commonWords >= 2)  // Let's assume that at least 2 words need to match at the beginning of the brand name, hopefully there are no separate brands that match this criteria
+                } else if (commonStartingWords >= 2)  // Let's assume that at least 2 words need to match at the beginning of the brand name, hopefully there are no separate brands that match this criteria
                 {
                     matched = true;
                     brand.setNormalizedBrand(canonicalBrand);

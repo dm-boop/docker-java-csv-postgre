@@ -7,7 +7,7 @@ CREATE TABLE IF NOT EXISTS products (
     product_id INTEGER NOT NULL,
     size_label VARCHAR(50),
     product_name VARCHAR(200),
-    brand VARCHAR(50),
+    brand VARCHAR(100),
     color VARCHAR(50),
     age_group VARCHAR(50),
     gender VARCHAR(50),

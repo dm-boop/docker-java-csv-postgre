@@ -48,7 +48,9 @@ public class Main {
 
         // let's get a list of original brands with their mapping to their canonical brand
         canonicalBrands = canonicalBrands(brands);
-
+        canonicalBrands.forEach(canonicalBrand -> {
+            System.out.println(canonicalBrand.getNormalizedBrand());
+        });
 
         List<Product> products = loadCSVData(CSV_FILE_PATH);
 
@@ -58,6 +60,7 @@ public class Main {
 
                 // Update the brand before we try to insert
                 String normalizedBrand = getNormalizedBrandNameForOriginalName(canonicalBrands, product.getBrand());
+                System.out.println(normalizedBrand);
                 product.setBrand(normalizedBrand);
 
                 if (productAddedWithSameVariantId.isEmpty()) {
@@ -195,7 +198,7 @@ public class Main {
                 "brand, color, age_group, gender, size_type, product_type, is_duplicate) " +
                 "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)";
 
-        // Establish database connection and execute insert - TODO This is definitely need to move from here
+        // Establish database connection and execute insert - TODO This definitely needs to move from here
         try (Connection conn = DriverManager.getConnection(DB_URL, USER, PASSWORD);
              PreparedStatement pstmt = conn.prepareStatement(insertQuery)) {
 
@@ -365,12 +368,12 @@ public class Main {
         String formattedExistingBrand = capitalizeWords(existingBrand);
         String formattedNewBrand = capitalizeWords(newBrand);
 
-        // Prefer the longer one if one is a substring of the other
-        if (formattedExistingBrand.contains(formattedNewBrand)) {
-            return formattedExistingBrand;
-        }
-        if (formattedNewBrand.contains(formattedExistingBrand)) {
+        // Prefer the shorter one if one is a substring of the other
+        if (formattedExistingBrand.startsWith(formattedNewBrand)) {
             return formattedNewBrand;
+        }
+        if (formattedNewBrand.startsWith(formattedExistingBrand)) {
+            return formattedExistingBrand;
         }
 
         // Default: Concatenate them with a separator if they are completely different, we shall never reach this point
