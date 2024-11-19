@@ -2,6 +2,7 @@ package org.example;
 
 import java.util.*;
 import java.util.stream.Collectors;
+import java.util.regex.Pattern;
 
 public class BrandNormalizer {
 
@@ -93,7 +94,7 @@ public class BrandNormalizer {
                 {
                     matched = true;
                     brand.setNormalizedBrand(canonicalBrand);
-                    brand.setSubBrand(normalizedBrand.replaceFirst(canonicalBrand, "").trim());
+                    brand.setSubBrand(normalizedBrand.replaceFirst(Pattern.quote(canonicalBrand), "").trim());
                 }
             }
         }

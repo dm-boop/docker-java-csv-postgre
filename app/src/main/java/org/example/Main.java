@@ -4,12 +4,14 @@ import org.apache.commons.csv.CSVParser;
 import org.apache.commons.csv.CSVFormat;
 import org.apache.commons.csv.CSVRecord;
 
+import java.io.*;
 import java.io.FileInputStream;
 import java.io.InputStreamReader;
 import java.nio.charset.StandardCharsets;
 
 import java.io.IOException;
 import java.util.ArrayList;
+import java.util.Arrays;
 import java.util.List;
 
 import java.sql.Connection;
@@ -41,80 +43,131 @@ public class Main {
         List<Brand> brands = loadBrands(CSV_FILE_PATH);
         List<Brand> canonicalBrands;
 
+        System.out.println("Brands loaded.");
+
         brands.sort((b1, b2) -> b1.getOriginalBrand().toLowerCase().compareTo(b2.getOriginalBrand().toLowerCase()));
-        brands.forEach(brand -> {
-            System.out.println(brand.getOriginalBrand());
-        });
+//        brands.forEach(brand -> {
+//            System.out.println(brand.getOriginalBrand());
+//        });
+        System.out.println("Brands sorted.");
+//        String brandChatGPT = "";
+//        List<String> brandNames = Arrays.asList(
+//                "Adidas Kids", "ADIDAS", "Adidas Inc.", "Adidas Sportswear"
+//        );
+//        //brandChatGPT = getBrandFromChatGPT(brandNames);
 
         // let's get a list of original brands with their mapping to their canonical brand
         canonicalBrands = canonicalBrands(brands);
-        canonicalBrands.forEach(canonicalBrand -> {
-            System.out.println(canonicalBrand.getNormalizedBrand());
-        });
+//        canonicalBrands.forEach(canonicalBrand -> {
+//            System.out.println(canonicalBrand.getNormalizedBrand());
+//        });
 
-        List<Product> products = loadCSVData(CSV_FILE_PATH);
+        System.out.println("Brands canonized.");
 
-        for (Product product : products) {
-            try {
-                List<Product> productAddedWithSameVariantId = selectProductsByVariantId(product.getVariantId());
 
-                // Update the brand before we try to insert
-                String normalizedBrand = getNormalizedBrandNameForOriginalName(canonicalBrands, product.getBrand());
-                System.out.println(normalizedBrand);
-                product.setBrand(normalizedBrand);
+        System.out.println("Starting to load products.");
 
-                if (productAddedWithSameVariantId.isEmpty()) {
-                    insertProduct(
-                            // uuid is generated automatically, no need to pass
-                            product.getVariantId(),
-                            product.getProductId(),
-                            product.getSizeLabel(),
-                            product.getProductName(),
-                            product.getBrand(),
-                            product.getColor(),
-                            product.getAgeGroup(),
-                            product.getGender(),
-                            product.getSizeType(),
-                            product.getProductType(),
-                            product.getIsDuplicate()
-                    );
-                } else if (productAddedWithSameVariantId.size() == 1) {
-                    //Instead of adding it again, we merge the data
-                    Product mergedProduct = mergeProducts(productAddedWithSameVariantId.getFirst(), product);
 
-                    updateProductByVariantId(
-                            mergedProduct.getVariantId(),
-                            mergedProduct.getProductId(),
-                            mergedProduct.getSizeLabel(),
-                            mergedProduct.getProductName(),
-                            mergedProduct.getBrand(),
-                            mergedProduct.getColor(),
-                            mergedProduct.getAgeGroup(),
-                            mergedProduct.getGender(),
-                            mergedProduct.getSizeType(),
-                            mergedProduct.getProductType(),
-                            mergedProduct.getIsDuplicate()
-                    );
+        int offset = 0; // Starting point in the file
+        int chunkSize = 10000; // Number of records per chunk
 
-                } else {
-                    System.err.println("Somehow we already inserted twice, err");
+        while (true) {
+            List<Product> products = loadCSVData(CSV_FILE_PATH, offset, chunkSize);
+            System.out.println("Starting to insert products.");
+            for (Product product : products) {
+                try {
+                    List<Product> productAddedWithSameVariantId = selectProductsByVariantId(product.getVariantId());
+
+                    // Update the brand before we try to insert
+                    String normalizedBrand = getNormalizedBrandNameForOriginalName(canonicalBrands, product.getBrand());
+                    //System.out.println(normalizedBrand);
+                    product.setBrand(normalizedBrand);
+
+                    if (productAddedWithSameVariantId.isEmpty()) {
+                        insertProduct(
+                                // uuid is generated automatically, no need to pass
+                                product.getVariantId(),
+                                product.getProductId(),
+                                product.getSizeLabel(),
+                                product.getProductName(),
+                                product.getBrand(),
+                                product.getColor(),
+                                product.getAgeGroup(),
+                                product.getGender(),
+                                product.getSizeType(),
+                                product.getProductType(),
+                                product.getIsDuplicate()
+                        );
+                    } else if (productAddedWithSameVariantId.size() == 1) {
+                        //Instead of adding it again, we merge the data
+                        Product mergedProduct = mergeProducts(productAddedWithSameVariantId.getFirst(), product);
+
+                        updateProductByVariantId(
+                                mergedProduct.getVariantId(),
+                                mergedProduct.getProductId(),
+                                mergedProduct.getSizeLabel(),
+                                mergedProduct.getProductName(),
+                                mergedProduct.getBrand(),
+                                mergedProduct.getColor(),
+                                mergedProduct.getAgeGroup(),
+                                mergedProduct.getGender(),
+                                mergedProduct.getSizeType(),
+                                mergedProduct.getProductType(),
+                                mergedProduct.getIsDuplicate()
+                        );
+
+                    } else {
+                        System.err.println("Somehow we already inserted twice, err");
+                    }
+                } catch (SQLException e) {
+                    System.err.println("Error inserting product: " + e.getMessage());
                 }
-            } catch (SQLException e) {
-                System.err.println("Error inserting product: " + e.getMessage());
+            };
+
+            if (products.isEmpty()) {
+                System.out.println("No more records to process.");
+                break;
             }
+
+            System.out.println("Processing chunk starting at offset " + offset + " with size " + products.size());
+            // Process the chunk (e.g., insert into DB, analyze, etc.)
+
+            offset += chunkSize; // Move to the next chunk
         }
-        ;
+
+        System.out.println("Products loaded.");
     }
 
 
-    private static List<Product> loadCSVData(String filePath) {
+    private static List<Product> loadCSVData(String filePath, int offset, int chunkSize) {
         List<Product> products = new ArrayList<>();
 
-        try (CSVParser csvParser = new CSVParser(
-                new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8), // Use UTF-8 encoding
-                CSVFormat.DEFAULT.withHeader().withIgnoreHeaderCase().withTrim())) {
+        try (BufferedReader reader = new BufferedReader(new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8));
 
+            CSVParser csvParser = new CSVParser(reader, CSVFormat.DEFAULT.withHeader().withIgnoreHeaderCase().withTrim())) {
+
+            int lineNumber = 0;
+
+//                CSVParser csvParser = new CSVParser(
+//                new InputStreamReader(new FileInputStream(filePath), StandardCharsets.UTF_8), // Use UTF-8 encoding
+//                CSVFormat.DEFAULT.withHeader().withIgnoreHeaderCase().withTrim())) {
+            List<CSVRecord> chunkRecords = new ArrayList<>();
             for (CSVRecord record : csvParser) {
+                if (lineNumber < offset) {
+                    lineNumber++;
+                    continue; // Skip records until reaching the offset
+                }
+
+                chunkRecords.add(record);
+
+                // Stop after reading the desired chunk size
+                if (chunkRecords.size() >= chunkSize) {
+                    break;
+                }
+            }
+
+
+            for (CSVRecord record : chunkRecords) {
                 try {
                     // Sanitize and validate each field
                     String variantId = record.get("variant_id");
@@ -217,7 +270,7 @@ public class Main {
             pstmt.setBoolean(12, isDuplicate);
 
             pstmt.executeUpdate();
-            System.out.println("Product inserted successfully.");
+            //System.out.println("Product inserted successfully.");
 
         } catch (SQLException e) {
             System.err.println("Error inserting product: " + e.getMessage());
@@ -253,7 +306,7 @@ public class Main {
             int rowsUpdated = pstmt.executeUpdate();
 
             if (rowsUpdated > 0) {
-                System.out.println("Product updated successfully.");
+                //System.out.println("Product updated successfully.");
             } else {
                 System.out.println("No product found with the given variant_id.");
             }
